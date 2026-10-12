@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1c130d">
+<title>Bilardo — İki Kişilik 8 Top</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --room: #1c130d;
+    --wood: #6b3519;
+    --wood-d: #3a1a0b;
+    --felt: #146b45;
+    --ivory: #f1e9d2;
+    --chalk: #4f9fd9;
+    --brass: #c9a24a;
+    --muted: #b9a98c;
+    --display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+    --body: 'Work Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%;
+    background: radial-gradient(ellipse at 50% 40%, #3a2616 0%, var(--room) 70%) var(--room);
+    color: var(--ivory);
+    font-family: var(--body);
+    overscroll-behavior: none;
+    overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+
+  #app {
+    height: 100vh; height: 100dvh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  }
+
+  /* Skor tabelası */
+  .bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 8px;
+    align-items: stretch;
+    padding: 10px 12px 6px;
+  }
+  .player {
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 2px solid rgba(241,233,210,.08);
+    background: rgba(0,0,0,.28);
+    transition: border-color .2s, background .2s;
+  }
+  .player.active {
+    border-color: var(--chalk);
+    background: rgba(79,159,217,.14);
+    box-shadow: 0 0 18px rgba(79,159,217,.25);
+  }
+  .player .name {
+    font-family: var(--display);
+    font-weight: 800;
+    font-size: 1.3rem;
+    line-height: 1.05;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .player .group { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+  .dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 5px; min-height: 12px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; box-shadow: inset -2px -2px 3px rgba(0,0,0,.35); }
+  #p1 { text-align: right; }
+  #p1 .dots { justify-content: flex-end; }
+  .iconbtn {
+    align-self: center;
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(201,162,74,.45);
+    background: rgba(0,0,0,.3);
+    display: grid; place-items: center;
+  }
+  .iconbtn svg { width: 20px; height: 20px; }
+
+  /* Masa */
+  #stage { position: relative; min-height: 0; min-width: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+  #toast {
+    position: absolute; left: 50%; top: 8px;
+    transform: translate(-50%, -6px);
+    width: max-content; max-width: 92%;
+    background: rgba(20,12,6,.9);
+    border: 1px solid rgba(201,162,74,.5);
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: .88rem; text-align: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Kontroller */
+  .controls { display: flex; align-items: center; gap: 10px; padding: 8px 12px 14px; }
+  .power { flex: 1; display: flex; flex-direction: column; gap: 6px; font-size: .8rem; color: var(--muted); }
+  .power span b { color: var(--ivory); font-weight: 600; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 28px; background: transparent; margin: 0;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, #2c5f45, var(--brass) 70%, #d9583b);
+  }
+  input[type=range]::-moz-range-track {
+    height: 8px; border-radius: 4px;
+    background: linear-gradient(90deg, #2c5f45, var(--brass) 70%, #d9583b);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 26px; height: 26px; margin-top: -9px;
+    border-radius: 50%; background: var(--ivory);
+    border: 3px solid var(--chalk);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--ivory); border: 3px solid var(--chalk);
+  }
+  .nudge {
+    flex: none;
+    width: 46px; height: 46px; border-radius: 50%;
+    border: 1px solid rgba(241,233,210,.25);
+    background: rgba(0,0,0,.3);
+    font-size: 1.3rem; line-height: 1;
+    touch-action: none;
+  }
+  #shoot {
+    flex: none;
+    height: 54px; padding: 0 28px;
+    border-radius: 27px; border: 0;
+    background: var(--chalk); color: #08223a;
+    font-family: var(--display); font-weight: 800; font-size: 1.55rem;
+    letter-spacing: .02em;
+    box-shadow: 0 4px 0 #2b6a98;
+  }
+  #shoot:active { transform: translateY(2px); box-shadow: 0 2px 0 #2b6a98; }
+  .controls button:disabled { opacity: .35; cursor: default; }
+
+  @media (orientation: landscape) and (max-height: 560px) {
+    #app {
+      grid-template-columns: 1fr 210px;
+      grid-template-rows: auto 1fr;
+      grid-template-areas: "bar bar" "stage ctrl";
+    }
+    .bar { grid-area: bar; padding: 6px 10px 2px; }
+    .player { padding: 4px 10px; }
+    .player .name { font-size: 1.05rem; }
+    .dots { margin-top: 3px; }
+    .dot { width: 10px; height: 10px; }
+    #stage { grid-area: stage; }
+    .controls { grid-area: ctrl; flex-wrap: wrap; justify-content: center; align-content: center; padding: 8px 12px; }
+    .power { flex-basis: 100%; order: -1; }
+    #shoot { flex-basis: 100%; }
+  }
+
+  /* Açılış ve bitiş ekranları */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10;
+    display: grid; place-items: center;
+    padding: 20px;
+    background: rgba(18,11,6,.88);
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    overflow-y: auto;
+    -webkit-user-select: text; user-select: text;
+  }
+  .overlay.hidden { display: none; }
+  .panel {
+    width: min(440px, 100%);
+    background: linear-gradient(#26180f, #1a100a);
+    border: 1px solid rgba(201,162,74,.35);
+    border-radius: 20px;
+    padding: 26px 22px 22px;
+    box-shadow: 0 30px 60px rgba(0,0,0,.5);
+  }
+  h1, h2 {
+    font-family: var(--display); font-weight: 800;
+    margin: 0; line-height: .9;
+  }
+  h1 { font-size: clamp(3.4rem, 15vw, 5rem); }
+  h2 { font-size: clamp(2.2rem, 9vw, 3rem); }
+  .rack {
+    display: flex; gap: 4px; margin: 10px 0 6px;
+  }
+  .rack i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset -3px -3px 4px rgba(0,0,0,.35); }
+  .lead { color: var(--muted); margin: .5rem 0 1.4rem; line-height: 1.5; }
+  fieldset { border: 0; padding: 0; margin: 0 0 16px; }
+  legend { font-weight: 600; margin-bottom: 8px; padding: 0; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  label.field { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; color: var(--muted); }
+  input[type=text] {
+    width: 100%; padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(241,233,210,.2);
+    background: rgba(0,0,0,.35);
+    color: var(--ivory);
+    font: inherit; font-size: 16px;
+  }
+  input[type=text]:focus { border-color: var(--chalk); outline: none; }
+  .primary {
+    width: 100%; height: 54px; margin-top: 6px;
+    border: 0; border-radius: 14px;
+    background: var(--chalk); color: #08223a;
+    font-family: var(--display); font-weight: 800; font-size: 1.5rem;
+    box-shadow: 0 4px 0 #2b6a98;
+  }
+  .secondary {
+    width: 100%; height: 48px; margin-top: 10px;
+    border-radius: 14px;
+    border: 1px solid rgba(241,233,210,.25);
+    background: transparent;
+    font-weight: 600;
+  }
+  .error { color: #f2917f; font-size: .85rem; min-height: 1.2em; margin: 0 0 6px; }
+  .howto { font-size: .85rem; color: var(--muted); margin: 16px 0 0; line-height: 1.55; }
+  #overReason { color: var(--muted); margin: .7rem 0 1.4rem; line-height: 1.5; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #toast, .player { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="bar">
+    <div class="player" id="p0">
+      <div class="name">Oyuncu 1</div>
+      <div class="group">Grup belli değil</div>
+      <div class="dots"></div>
+    </div>
+    <button class="iconbtn" id="menuBtn" aria-label="Yeni oyun">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+    </button>
+    <div class="player" id="p1">
+      <div class="name">Oyuncu 2</div>
+      <div class="group">Grup belli değil</div>
+      <div class="dots"></div>
+    </div>
+  </header>
+
+  <main id="stage">
+    <canvas id="table" aria-label="Bilardo masası"></canvas>
+    <div id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <footer class="controls">
+    <button class="nudge" id="aimLeft" aria-label="Nişanı sola çevir">↺</button>
+    <label class="power">
+      <span>Vuruş gücü <b id="powerVal">50%</b></span>
+      <input type="range" id="power" min="5" max="100" value="50" aria-label="Vuruş gücü">
+    </label>
+    <button class="nudge" id="aimRight" aria-label="Nişanı sağa çevir">↻</button>
+    <button id="shoot">Vur</button>
+  </footer>
+</div>
+
+<!-- Oyuncu girişi -->
+<div class="overlay" id="setup">
+  <form class="panel" id="setupForm" novalidate>
+    <h1>Bilardo</h1>
+    <div class="rack" aria-hidden="true">
+      <i style="background:#f2c230"></i><i style="background:#1f4fb4"></i><i style="background:#d0302b"></i><i style="background:#151515"></i><i style="background:#ef7a1a"></i><i style="background:#1d7a3e"></i>
+    </div>
+    <p class="lead">İki kişilik 8 top. Önce isimlerinizi yazın, açışı birinci oyuncu yapar.</p>
+
+    <fieldset>
+      <legend>Birinci oyuncu</legend>
+      <div class="row">
+        <label class="field">Ad<input type="text" id="f0" autocomplete="off" maxlength="20" required></label>
+        <label class="field">Soyad<input type="text" id="l0" autocomplete="off" maxlength="20" required></label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>İkinci oyuncu</legend>
+      <div class="row">
+        <label class="field">Ad<input type="text" id="f1" autocomplete="off" maxlength="20" required></label>
+        <label class="field">Soyad<input type="text" id="l1" autocomplete="off" maxlength="20" required></label>
+      </div>
+    </fieldset>
+
+    <p class="error" id="setupError"></p>
+    <button type="submit" class="primary">Oyunu başlat</button>
+    <p class="howto">Masaya dokunarak ya da parmağını kaydırarak nişan al, ince ayar için ↺ ↻ tuşlarını kullan, gücü seçip Vur'a bas. Faulden sonra beyaz topu sürükleyerek istediğin yere koyabilirsin.</p>
+  </form>
+</div>
+
+<!-- Oyun sonu -->
+<div class="overlay hidden" id="over">
+  <div class="panel">
+    <h2 id="overTitle">Kazanan</h2>
+    <p id="overReason"></p>
+    <button class="primary" id="rematchBtn">Rövanş</button>
+    <button class="secondary" id="newPlayersBtn">Yeni oyuncular</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ---------- Sabitler ----------
+  const W = 1000, H = 500;          // oyun alanı (çuha)
+  const M = 46;                      // bant + ahşap genişliği
+  const TW = W + 2 * M, TH = H + 2 * M;
+  const R = 11;                      // top yarıçapı
+  const POCKETS = [
+    { x: 0,     y: 0,     r: 25 }, { x: W / 2, y: -4,    r: 21 }, { x: W, y: 0, r: 25 },
+    { x: 0,     y: H,     r: 25 }, { x: W / 2, y: H + 4, r: 21 }, { x: W, y: H, r: 25 }
+  ];
+  const COLORS = { 1: '#f2c230', 2: '#1f4fb4', 3: '#d0302b', 4: '#5b2a86', 5: '#ef7a1a', 6: '#1d7a3e', 7: '#7a1f22', 8: '#151515' };
+  const IVORY = '#f6f1e3';
+  const HEAD = { x: W * 0.25, y: H / 2 };
+  const FOOT = { x: W * 0.72, y: H / 2 };
+  const AIM_STEP = 0.25 * Math.PI / 180;
+  const GROUP_NAME = { solid: 'Düz toplar', stripe: 'Çizgili toplar' };
+
+  const $ = id => document.getElementById(id);
+  const canvas = $('table');
+  const ctx = canvas.getContext('2d');
+
+  // ---------- Durum ----------
+  let dpr = 1, cw = 0, ch = 0;
+  let view = { portrait: false, s: 1, ox: 0, oy: 0 };
+  let balls = [];
+  let players = [{ first: 'Oyuncu', last: '1' }, { first: 'Oyuncu', last: '2' }];
+  let cur = 0, starter = 0;
+  let groups = [null, null];
+  let state = 'setup';               // setup | aim | moving | over
+  let ballInHand = false, isBreak = true;
+  let aim = 0, power = 50;
+  let shot = null, dragging = false;
+  let acc = 0, lastT = 0, soundBudget = 0;
+  let audio = null;
+
+  const typeOf = id => id === 0 ? 'cue' : id === 8 ? 'eight' : id < 8 ? 'solid' : 'stripe';
+  const ballColor = id => COLORS[id > 8 ? id - 8 : id];
+  const fullName = i => players[i].first + ' ' + players[i].last;
+  const cueBall = () => balls[0];
+  const remaining = g => balls.filter(b => b.on && typeOf(b.id) === g).length;
+
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = (Math.random() * (i + 1)) | 0;
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // ---------- Diziliş ----------
+  function rack() {
+    balls = [{ id: 0, x: HEAD.x, y: HEAD.y, vx: 0, vy: 0, on: true }];
+    const pos = [];
+    const dx = 2 * R * Math.cos(Math.PI / 6) + 0.4;
+    for (let row = 0; row < 5; row++) {
+      for (let i = 0; i <= row; i++) {
+        pos.push({ x: FOOT.x + row * dx, y: FOOT.y + (i - row / 2) * (2 * R + 0.4) });
+      }
+    }
+    const solids = shuffle([1, 2, 3, 4, 5, 6, 7]);
+    const stripes = shuffle([9, 10, 11, 12, 13, 14, 15]);
+    const order = new Array(15);
+    order[4] = 8;                                  // 8 ortada
+    const leftCorner = Math.random() < 0.5;        // arka köşeler: biri düz biri çizgili
+    order[10] = leftCorner ? solids.pop() : stripes.pop();
+    order[14] = leftCorner ? stripes.pop() : solids.pop();
+    const rest = shuffle(solids.concat(stripes));
+    for (let i = 0; i < 15; i++) if (order[i] === undefined) order[i] = rest.pop();
+    order.forEach((id, i) => balls.push({ id, x: pos[i].x, y: pos[i].y, vx: 0, vy: 0, on: true }));
+  }
+
+  function overlaps(x, y, except) {
+    return balls.some(b => b.on && b !== except && Math.hypot(b.x - x, b.y - y) < 2 * R + 0.5);
+  }
+  function placeFree(ball, x, y) {
+    let tries = 0;
+    while (overlaps(x, y, ball) && tries < 200) {
+      x += 2 * R + 1;
+      if (x > W - R) { x = R + 5; y += 2 * R + 1; if (y > H - R) y = R + 5; }
+      tries++;
+    }
+    ball.x = x; ball.y = y; ball.vx = ball.vy = 0; ball.on = true;
+  }
+
+  // ---------- Ekran / dönüşüm ----------
+  function resize() {
+    const r = $('stage').getBoundingClientRect();
+    cw = r.width; ch = r.height;
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    canvas.width = Math.max(1, Math.round(cw * dpr));
+    canvas.height = Math.max(1, Math.round(ch * dpr));
+    const portrait = ch > cw;
+    if (portrait) {
+      const s = Math.min(cw / TH, ch / TW) * 0.97;
+      view = { portrait, s, ox: (cw - TH * s) / 2, oy: (ch - TW * s) / 2 };
+    } else {
+      const s = Math.min(cw / TW, ch / TH) * 0.97;
+      view = { portrait, s, ox: (cw - TW * s) / 2, oy: (ch - TH * s) / 2 };
+    }
+  }
+
+  function applyView() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (view.portrait) {
+      ctx.translate(view.ox + TH * view.s, view.oy);
+      ctx.rotate(Math.PI / 2);
+    } else {
+      ctx.translate(view.ox, view.oy);
+    }
+    ctx.scale(view.s, view.s);
+    ctx.translate(M, M);
+  }
+
+  function toTable(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const sx = clientX - rect.left, sy = clientY - rect.top;
+    let X, Y;
+    if (view.portrait) {
+      X = (sy - view.oy) / view.s;
+      Y = (view.ox + TH * view.s - sx) / view.s;
+    } else {
+      X = (sx - view.ox) / view.s;
+      Y = (sy - view.oy) / view.s;
+    }
+    return { x: X - M, y: Y - M };
+  }
+
+  // ---------- Ses ----------
+  function initAudio() {
+    if (audio) return;
+    try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audio = null; }
+  }
+  function click(strength, freq) {
+    if (!audio || soundBudget <= 0) return;
+    soundBudget--;
+    try {
+      const t = audio.currentTime;
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'triangle';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(Math.min(0.22, strength / 60), t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+      o.connect(g).connect(audio.destination);
+      o.start(t); o.stop(t + 0.07);
+    } catch (e) { /* ses opsiyonel */ }
+  }
+
+  // ---------- Fizik ----------
+  function pocketBall(b) {
+    b.on = false; b.vx = b.vy = 0;
+    click(18, 220);
+    if (!shot) return;
+    if (b.id === 0) shot.scratch = true;
+    else shot.potted.push(b.id);
+  }
+
+  function step() {
+    const SUB = 6;
+    for (let s = 0; s < SUB; s++) {
+      for (const b of balls) {
+        if (!b.on) continue;
+        b.x += b.vx / SUB;
+        b.y += b.vy / SUB;
+      }
+      // top-top çarpışmaları
+      for (let i = 0; i < balls.length; i++) {
+        const a = balls[i];
+        if (!a.on) continue;
+        for (let j = i + 1; j < balls.length; j++) {
+          const b = balls[j];
+          if (!b.on) continue;
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 >= 4 * R * R || d2 === 0) continue;
+          const d = Math.sqrt(d2);
+          const nx = dx / d, ny = dy / d;
+          const overlap = 2 * R - d;
+          a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
+          b.x += nx * overlap / 2; b.y += ny * overlap / 2;
+          const rel = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+          if (rel > 0) {
+            const jmp = rel * 0.98;
+            a.vx -= jmp * nx; a.vy -= jmp * ny;
+            b.vx += jmp * nx; b.vy += jmp * ny;
+            if (shot && shot.firstHit === null) {
+              if (a.id === 0) shot.firstHit = b.id;
+              else if (b.id === 0) shot.firstHit = a.id;
+            }
+            if (rel > 0.8) click(rel, 1900);
+          }
+        }
+      }
+      // bantlar ve delikler
+      for (const b of balls) {
+        if (!b.on) continue;
+        let potted = false;
+        for (const p of POCKETS) {
+          if (Math.hypot(b.x - p.x, b.y - p.y) < p.r) { pocketBall(b); potted = true; break; }
+        }
+        if (potted) continue;
+        const nearCornerX = b.x < 30 || b.x > W - 30;
+        const nearCornerY = b.y < 30 || b.y > H - 30;
+        const nearMid = Math.abs(b.x - W / 2) < 20;
+        if (b.x < R && !nearCornerY) { b.x = R; b.vx = Math.abs(b.vx) * 0.78; }
+        if (b.x > W - R && !nearCornerY) { b.x = W - R; b.vx = -Math.abs(b.vx) * 0.78; }
+        if (b.y < R && !(nearCornerX || nearMid)) { b.y = R; b.vy = Math.abs(b.vy) * 0.78; }
+        if (b.y > H - R && !(nearCornerX || nearMid)) { b.y = H - R; b.vy = -Math.abs(b.vy) * 0.78; }
+        if (b.x < -R || b.x > W + R || b.y < -R || b.y > H + R) pocketBall(b);
+      }
+    }
+    // sürtünme
+    for (const b of balls) {
+      if (!b.on) continue;
+      const sp = Math.hypot(b.vx, b.vy);
+      if (sp === 0) continue;
+      const ns = sp * 0.987 - 0.01;
+      if (ns <= 0.03) { b.vx = b.vy = 0; }
+      else { b.vx *= ns / sp; b.vy *= ns / sp; }
+    }
+  }
+
+  const allStopped = () => balls.every(b => !b.on || (b.vx === 0 && b.vy === 0));
+
+  // ---------- Kurallar ----------
+  function shoot() {
+    if (state !== 'aim' || !cueBall().on) return;
+    initAudio();
+    const v = 4 + (power / 100) * 30;
+    const c = cueBall();
+    c.vx = Math.cos(aim) * v;
+    c.vy = Math.sin(aim) * v;
+    shot = {
+      firstHit: null, potted: [], scratch: false,
+      clearedBefore: !!groups[cur] && remaining(groups[cur]) === 0
+    };
+    state = 'moving';
+    ballInHand = false;
+    dragging = false;
+    syncControls();
+  }
+
+  function evaluate() {
+    const p = cur, o = 1 - cur, s = shot;
+    shot = null;
+    const objPotted = s.potted.filter(id => id !== 8);
+    let foul = null;
+
+    if (s.scratch) foul = 'Beyaz top deliğe girdi';
+    else if (s.firstHit === null) foul = 'Beyaz top hiçbir topa değmedi';
+    else if (groups[p]) {
+      if (s.clearedBefore && s.firstHit !== 8) foul = 'İlk temas 8 numaraya olmalıydı';
+      else if (!s.clearedBefore && typeOf(s.firstHit) !== groups[p]) foul = 'İlk temas kendi grubundan bir topa olmalıydı';
+    } else if (!isBreak && s.firstHit === 8) {
+      foul = 'Masa açıkken ilk temas 8 numaraya olamaz';
+    }
+
+    if (s.potted.includes(8)) {
+      if (isBreak) {
+        placeFree(balls.find(b => b.id === 8), FOOT.x, FOOT.y);
+      } else {
+        if (groups[p] && s.clearedBefore && !foul) {
+          return endGame(p, fullName(p) + ' 8 numarayı usulüne uygun şekilde soktu.');
+        }
+        return endGame(o, foul
+          ? fullName(p) + ' 8 numarayı sokarken faul yaptı.'
+          : fullName(p) + ' 8 numarayı erken soktu.');
+      }
+    }
+
+    let assigned = false;
+    if (!foul && !groups[p] && !isBreak && objPotted.length) {
+      const t = typeOf(objPotted[0]);
+      groups[p] = t;
+      groups[o] = t === 'solid' ? 'stripe' : 'solid';
+      assigned = true;
+    }
+    const scored = !foul && objPotted.some(id => groups[p] ? typeOf(id) === groups[p] : true);
+    isBreak = false;
+
+    if (s.scratch) placeFree(cueBall(), HEAD.x, HEAD.y);
+
+    let msg;
+    if (foul) {
+      cur = o;
+      ballInHand = true;
+      msg = 'Faul! ' + foul + '. Top elde: ' + fullName(o);
+    } else if (scored) {
+      msg = assigned
+        ? fullName(p) + ': ' + GROUP_NAME[groups[p]].toLocaleLowerCase('tr-TR') + '. Devam!'
+        : fullName(p) + ' devam ediyor.';
+    } else {
+      cur = o;
+      msg = 'Sıra: ' + fullName(o);
+    }
+    state = 'aim';
+    pointAimAtRack();
+    updateHUD();
+    syncControls();
+    toast(msg);
+  }
+
+  function endGame(winner, reason) {
+    state = 'over';
+    updateHUD();
+    syncControls();
+    $('overTitle').textContent = fullName(winner) + ' kazandı';
+    $('overReason').textContent = reason;
+    setTimeout(() => $('over').classList.remove('hidden'), 500);
+  }
+
+  function newGame() {
+    rack();
+    cur = starter;
+    groups = [null, null];
+    isBreak = true;
+    ballInHand = false;
+    shot = null;
+    aim = 0;
+    state = 'aim';
+    updateHUD();
+    syncControls();
+    toast('Açış: ' + fullName(cur));
+  }
+
+  // Sıra değişince nişanı en yakın uygun topa çevir (kolaylık)
+  function pointAimAtRack() {
+    const c = cueBall();
+    const g = groups[cur];
+    let best = null, bd = Infinity;
+    for (const b of balls) {
+      if (!b.on || b.id === 0) continue;
+      const ok = g ? (remaining(g) === 0 ? b.id === 8 : typeOf(b.id) === g) : b.id !== 8;
+      if (!ok) continue;
+      const d = Math.hypot(b.x - c.x, b.y - c.y);
+      if (d < bd) { bd = d; best = b; }
+    }
+    if (best) aim = Math.atan2(best.y - c.y, best.x - c.x);
+  }
+
+  // ---------- Arayüz ----------
+  let toastTimer = null;
+  function toast(text) {
+    const t = $('toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function updateHUD() {
+    for (let i = 0; i < 2; i++) {
+      const el = $('p' + i);
+      el.classList.toggle('active', i === cur && state !== 'over' && state !== 'setup');
+      el.querySelector('.name').textContent = fullName(i);
+      const gEl = el.querySelector('.group');
+      const dots = el.querySelector('.dots');
+      dots.innerHTML = '';
+      const g = groups[i];
+      if (!g) { gEl.textContent = 'Grup belli değil'; continue; }
+      const rem = balls.filter(b => b.on && typeOf(b.id) === g);
+      gEl.textContent = rem.length ? GROUP_NAME[g] : 'Sıra 8 numarada';
+      const list = rem.length ? rem.map(b => b.id) : [8];
+      for (const id of list) {
+        const d = document.createElement('span');
+        d.className = 'dot';
+        const c = ballColor(id);
+        d.style.background = id > 8
+          ? `linear-gradient(${IVORY} 0 26%, ${c} 26% 74%, ${IVORY} 74%)`
+          : c;
+        dots.appendChild(d);
+      }
+    }
+  }
+
+  function syncControls() {
+    const off = state !== 'aim';
+    $('shoot').disabled = off;
+    $('aimLeft').disabled = off;
+    $('aimRight').disabled = off;
+  }
+
+  // ---------- Çizim ----------
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawTable() {
+    // ahşap çerçeve
+    const wood = ctx.createLinearGradient(0, -M, 0, H + M);
+    wood.addColorStop(0, '#7d4220');
+    wood.addColorStop(0.5, '#5a2b13');
+    wood.addColorStop(1, '#7d4220');
+    roundRect(-M, -M, TW, TH, 24);
+    ctx.fillStyle = wood;
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#2c1307';
+    ctx.stroke();
+
+    // bant
+    ctx.fillStyle = '#0d4a30';
+    ctx.fillRect(-15, -15, W + 30, H + 30);
+
+    // çuha + lamba ışığı
+    const felt = ctx.createRadialGradient(W / 2, H / 2, 40, W / 2, H / 2, W * 0.62);
+    felt.addColorStop(0, '#22975f');
+    felt.addColorStop(1, '#0e5236');
+    ctx.fillStyle = felt;
+    ctx.fillRect(0, 0, W, H);
+
+    // nişan elmasları
+    ctx.fillStyle = '#d8b862';
+    const diamond = (x, y) => {
+      ctx.beginPath();
+      ctx.moveTo(x, y - 4); ctx.lineTo(x + 4, y); ctx.lineTo(x, y + 4); ctx.lineTo(x - 4, y);
+      ctx.closePath(); ctx.fill();
+    };
+    for (let i = 1; i < 8; i++) {
+      if (i === 4) continue;
+      diamond(W * i / 8, -31); diamond(W * i / 8, H + 31);
+    }
+    for (let i = 1; i < 4; i++) { diamond(-31, H * i / 4); diamond(W + 31, H * i / 4); }
+
+    // başlangıç çizgisi ve nokta
+    ctx.strokeStyle = 'rgba(241,233,210,.12)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(HEAD.x, 0); ctx.lineTo(HEAD.x, H); ctx.stroke();
+    ctx.fillStyle = 'rgba(241,233,210,.25)';
+    ctx.beginPath(); ctx.arc(FOOT.x, FOOT.y, 2.5, 0, Math.PI * 2); ctx.fill();
+
+    // delikler
+    for (const p of POCKETS) {
+      ctx.fillStyle = '#050302';
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(201,162,74,.35)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+
+  function drawBall(b) {
+    const { x, y, id } = b;
+    // gölge
+    ctx.fillStyle = 'rgba(0,0,0,.32)';
+    ctx.beginPath(); ctx.ellipse(x + 2.5, y + 3.5, R, R * 0.9, 0, 0, Math.PI * 2); ctx.fill();
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.clip();
+    if (id === 0) {
+      ctx.fillStyle = IVORY; ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    } else if (id > 8) {
+      ctx.fillStyle = IVORY; ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+      ctx.fillStyle = ballColor(id); ctx.fillRect(x - R, y - R * 0.55, 2 * R, R * 1.1);
+    } else {
+      ctx.fillStyle = ballColor(id); ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    }
+    if (id > 0) {
+      ctx.fillStyle = IVORY;
+      ctx.beginPath(); ctx.arc(x, y, R * 0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.save();
+      ctx.translate(x, y);
+      if (view.portrait) ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = '#111';
+      ctx.font = `700 ${id > 9 ? 7 : 8}px ${'Work Sans'}, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(id), 0, 0.5);
+      ctx.restore();
+    }
+    const shade = ctx.createRadialGradient(x - R * 0.35, y - R * 0.4, 0.5, x, y, R * 1.25);
+    shade.addColorStop(0, 'rgba(255,255,255,.6)');
+    shade.addColorStop(0.3, 'rgba(255,255,255,0)');
+    shade.addColorStop(0.65, 'rgba(0,0,0,0)');
+    shade.addColorStop(1, 'rgba(0,0,0,.4)');
+    ctx.fillStyle = shade;
+    ctx.fillRect(x - R, y - R, 2 * R, 2 * R);
+    ctx.restore();
+  }
+
+  function castRay(ox, oy, dx, dy) {
+    let best = Infinity, hit = null;
+    for (const b of balls) {
+      if (!b.on || b.id === 0) continue;
+      const fx = ox - b.x, fy = oy - b.y;
+      const bq = fx * dx + fy * dy;
+      const c = fx * fx + fy * fy - 4 * R * R;
+      const disc = bq * bq - c;
+      if (disc < 0) continue;
+      const t = -bq - Math.sqrt(disc);
+      if (t > 0 && t < best) { best = t; hit = b; }
+    }
+    let tw = Infinity;
+    if (dx > 0) tw = Math.min(tw, (W - R - ox) / dx);
+    if (dx < 0) tw = Math.min(tw, (R - ox) / dx);
+    if (dy > 0) tw = Math.min(tw, (H - R - oy) / dy);
+    if (dy < 0) tw = Math.min(tw, (R - oy) / dy);
+    if (tw < best) { best = tw; hit = null; }
+    return { t: best, hit };
+  }
+
+  function drawGuide() {
+    const c = cueBall();
+    const dx = Math.cos(aim), dy = Math.sin(aim);
+    const { t, hit } = castRay(c.x, c.y, dx, dy);
+    const gx = c.x + dx * t, gy = c.y + dy * t;
+    ctx.save();
+    ctx.setLineDash([7, 7]);
+    ctx.strokeStyle = 'rgba(241,233,210,.55)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(c.x + dx * R, c.y + dy * R); ctx.lineTo(gx, gy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(241,233,210,.7)';
+    ctx.beginPath(); ctx.arc(gx, gy, R, 0, Math.PI * 2); ctx.stroke();
+    if (hit) {
+      const nx = hit.x - gx, ny = hit.y - gy, n = Math.hypot(nx, ny) || 1;
+      ctx.strokeStyle = 'rgba(79,159,217,.9)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(hit.x + nx / n * R, hit.y + ny / n * R);
+      ctx.lineTo(hit.x + nx / n * 95, hit.y + ny / n * 95);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function drawCue() {
+    const c = cueBall();
+    const dx = Math.cos(aim), dy = Math.sin(aim);
+    const px = -dy, py = dx;
+    const back = 16 + (power / 100) * 70;
+    const len = 360;
+    const start = R + back;
+    // ipucu (tebeşir), ferrül, gövde, sap
+    const segs = [
+      { from: 0,    to: 6,   w0: 3.6, w1: 3.7, color: '#4f9fd9' },
+      { from: 6,    to: 18,  w0: 3.7, w1: 3.9, color: '#f1e9d2' },
+      { from: 18,   to: 230, w0: 3.9, w1: 6.0, color: '#e2c38c' },
+      { from: 230,  to: 240, w0: 6.0, w1: 6.2, color: '#c9a24a' },
+      { from: 240,  to: len, w0: 6.2, w1: 8.0, color: '#4a2412' }
+    ];
+    // gölge
+    ctx.save();
+    ctx.globalAlpha = 0.25;
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(c.x - dx * start + 6, c.y - dy * start + 8);
+    ctx.lineTo(c.x - dx * (start + len) + 6, c.y - dy * (start + len) + 8);
+    ctx.stroke();
+    ctx.restore();
+    for (const s of segs) {
+      const a = start + s.from, b = start + s.to;
+      const ax = c.x - dx * a, ay = c.y - dy * a;
+      const bx = c.x - dx * b, by = c.y - dy * b;
+      ctx.fillStyle = s.color;
+      ctx.beginPath();
+      ctx.moveTo(ax + px * s.w0 / 2, ay + py * s.w0 / 2);
+      ctx.lineTo(bx + px * s.w1 / 2, by + py * s.w1 / 2);
+      ctx.lineTo(bx - px * s.w1 / 2, by - py * s.w1 / 2);
+      ctx.lineTo(ax - px * s.w0 / 2, ay - py * s.w0 / 2);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  function draw() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    applyView();
+    drawTable();
+    for (const b of balls) if (b.on) drawBall(b);
+    const c = cueBall();
+    if (state === 'aim' && c && c.on) {
+      if (ballInHand) {
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#4f9fd9';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(c.x, c.y, R + 7, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+      }
+      if (!dragging) { drawGuide(); drawCue(); }
+    }
+  }
+
+  // ---------- Döngü ----------
+  function loop(t) {
+    const dt = Math.min(0.1, (t - lastT) / 1000 || 0);
+    lastT = t;
+    if (state === 'moving') {
+      acc += dt;
+      while (acc >= 1 / 60) {
+        soundBudget = 3;
+        step();
+        acc -= 1 / 60;
+      }
+      if (allStopped()) { acc = 0; evaluate(); }
+    }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- Girdi ----------
+  function setAimFrom(p) {
+    const c = cueBall();
+    const dx = p.x - c.x, dy = p.y - c.y;
+    if (Math.hypot(dx, dy) > 2) aim = Math.atan2(dy, dx);
+  }
+
+  function tryPlaceCue(p) {
+    const c = cueBall();
+    const x = Math.max(R, Math.min(W - R, p.x));
+    const y = Math.max(R, Math.min(H - R, p.y));
+    if (!overlaps(x, y, c) && !POCKETS.some(k => Math.hypot(x - k.x, y - k.y) < k.r + R)) {
+      c.x = x; c.y = y;
+    }
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    if (state !== 'aim') return;
+    e.preventDefault();
+    canvas.setPointerCapture(e.pointerId);
+    const p = toTable(e.clientX, e.clientY);
+    const c = cueBall();
+    if (ballInHand && Math.hypot(p.x - c.x, p.y - c.y) < 48) {
+      dragging = true;
+    } else {
+      setAimFrom(p);
+    }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (state !== 'aim') return;
+    const p = toTable(e.clientX, e.clientY);
+    if (dragging) { tryPlaceCue(p); return; }
+    // fare ile üzerinde gezinirken ya da dokunup kaydırırken nişan al
+    if (e.pointerType === 'mouse' || e.buttons) setAimFrom(p);
+  });
+  const endDrag = () => { if (dragging) { dragging = false; pointAimAtRack(); } };
+  canvas.addEventListener('pointerup', endDrag);
+  canvas.addEventListener('pointercancel', endDrag);
+
+  function bindHold(el, delta) {
+    let t1 = null, t2 = null;
+    const stop = () => { clearTimeout(t1); clearInterval(t2); };
+    el.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      if (state !== 'aim') return;
+      aim += delta;
+      stop();
+      t1 = setTimeout(() => { t2 = setInterval(() => { if (state === 'aim') aim += delta; }, 35); }, 300);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, stop));
+    el.addEventListener('click', e => e.preventDefault());
+  }
+  bindHold($('aimLeft'), -AIM_STEP);
+  bindHold($('aimRight'), AIM_STEP);
+
+  const powerInput = $('power');
+  powerInput.addEventListener('input', () => {
+    power = +powerInput.value;
+    $('powerVal').textContent = power + '%';
+  });
+  $('shoot').addEventListener('click', shoot);
+
+  window.addEventListener('keydown', e => {
+    if (state !== 'aim' || e.target.tagName === 'INPUT' && e.target.type === 'text') return;
+    const big = e.shiftKey ? 8 : 1;
+    if (e.key === 'ArrowLeft') { aim -= AIM_STEP * big; e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { aim += AIM_STEP * big; e.preventDefault(); }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      power = Math.max(5, Math.min(100, power + (e.key === 'ArrowUp' ? 5 : -5)));
+      powerInput.value = power; $('powerVal').textContent = power + '%';
+      e.preventDefault();
+    } else if (e.key === ' ' || e.key === 'Enter') {
+      if (document.activeElement === powerInput || document.activeElement === document.body || document.activeElement === canvas) {
+        shoot(); e.preventDefault();
+      }
+    }
+  });
+
+  // ---------- Açılış formu ----------
+  const capitalize = s => s.split(/\s+/).filter(Boolean)
+    .map(w => w.charAt(0).toLocaleUpperCase('tr-TR') + w.slice(1)).join(' ');
+
+  $('setupForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const vals = ['f0', 'l0', 'f1', 'l1'].map(id => $(id).value.trim());
+    if (vals.some(v => !v)) {
+      $('setupError').textContent = 'İki oyuncu için de ad ve soyad yazın.';
+      const firstEmpty = ['f0', 'l0', 'f1', 'l1'][vals.findIndex(v => !v)];
+      $(firstEmpty).focus();
+      return;
+    }
+    $('setupError').textContent = '';
+    players = [
+      { first: capitalize(vals[0]), last: capitalize(vals[1]) },
+      { first: capitalize(vals[2]), last: capitalize(vals[3]) }
+    ];
+    initAudio();
+    starter = 0;
+    $('setup').classList.add('hidden');
+    newGame();
+  });
+
+  $('rematchBtn').addEventListener('click', () => {
+    $('over').classList.add('hidden');
+    starter = 1 - starter;
+    newGame();
+  });
+  $('newPlayersBtn').addEventListener('click', () => {
+    $('over').classList.add('hidden');
+    state = 'setup';
+    syncControls();
+    $('setup').classList.remove('hidden');
+  });
+  $('menuBtn').addEventListener('click', () => {
+    if (state === 'setup') return;
+    if (state !== 'over' && !confirm('Mevcut oyun bitsin ve yeni oyun başlasın mı?')) return;
+    $('over').classList.add('hidden');
+    state = 'setup';
+    syncControls();
+    $('setup').classList.remove('hidden');
+  });
+
+  // ---------- Başlat ----------
+  rack();
+  updateHUD();
+  syncControls();
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe($('stage'));
+  window.addEventListener('resize', resize);
+  resize();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
